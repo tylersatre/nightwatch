@@ -1,6 +1,14 @@
 # Release Notes
 
-## [Unreleased](https://github.com/laravel/nightwatch/compare/v1.1.0...1.x)
+## [Unreleased](https://github.com/laravel/nightwatch/compare/v1.1.1...1.x)
+
+## [v1.1.1](https://github.com/laravel/nightwatch/compare/v1.1.0...v1.1.1) - 2025-03-19
+
+### What's Changed
+
+* Fix horizon capturing jobs by [@timacdonald](https://github.com/timacdonald) in https://github.com/laravel/nightwatch/pull/125
+
+**Full Changelog**: https://github.com/laravel/nightwatch/compare/v1.1.0...v1.1.1
 
 ## [v1.1.0](https://github.com/laravel/nightwatch/compare/v1.0.7...v1.1.0) - 2025-03-17
 
