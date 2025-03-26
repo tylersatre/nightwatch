@@ -4,9 +4,9 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Events\RouteMatched;
 use Illuminate\Routing\Route;
 use Laravel\Nightwatch\Compatibility;
+use Laravel\Nightwatch\Hooks\GlobalMiddleware;
 use Laravel\Nightwatch\Hooks\RouteMatchedListener;
 use Laravel\Nightwatch\Hooks\RouteMiddleware;
-use Laravel\Nightwatch\Hooks\TerminatingMiddleware;
 
 it('gracefully handles middleware registered as a string', function () {
     $request = Request::create('/users');
@@ -21,6 +21,6 @@ it('gracefully handles middleware registered as a string', function () {
     if (Compatibility::$terminatingEventExists) {
         expect($route->action['middleware'])->toBe(['api', RouteMiddleware::class]);
     } else {
-        expect($route->action['middleware'])->toBe([TerminatingMiddleware::class, 'api', RouteMiddleware::class]);
+        expect($route->action['middleware'])->toBe([GlobalMiddleware::class, 'api', RouteMiddleware::class]);
     }
 });

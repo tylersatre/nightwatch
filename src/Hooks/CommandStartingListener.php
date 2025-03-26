@@ -17,6 +17,7 @@ use Illuminate\Queue\Events\JobPopping;
 use Illuminate\Queue\Events\JobProcessing;
 use Laravel\Nightwatch\Core;
 use Laravel\Nightwatch\State\CommandState;
+use Laravel\Nightwatch\Types\Str;
 use Throwable;
 
 /**
@@ -40,10 +41,11 @@ final class CommandStartingListener
         try {
             if ($this->nightwatch->state->name === null) {
                 $this->nightwatch->state->name = $event->command;
+                $this->nightwatch->state->executionPreview = Str::tinyText($event->command);
             } else {
                 return;
             }
-        } catch (Throwable $e) { // @phpstan-ignore catch.neverThrown
+        } catch (Throwable $e) {
             $this->nightwatch->report($e);
         }
 
