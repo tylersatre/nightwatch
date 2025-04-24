@@ -1,6 +1,21 @@
 # Release Notes
 
-## [Unreleased](https://github.com/laravel/nightwatch/compare/v1.2.1...1.x)
+## [Unreleased](https://github.com/laravel/nightwatch/compare/v1.3.0...1.x)
+
+## [v1.3.0](https://github.com/laravel/nightwatch/compare/v1.2.1...v1.3.0) - 2025-04-24
+
+### What's Changed
+
+* Improve quota check performance by [@timacdonald](https://github.com/timacdonald) in https://github.com/laravel/nightwatch/pull/136
+* Add status command by [@timacdonald](https://github.com/timacdonald) in https://github.com/laravel/nightwatch/pull/140
+* Use Bencode for agent payloads  by [@timacdonald](https://github.com/timacdonald) in https://github.com/laravel/nightwatch/pull/141
+* Fix typo by [@timacdonald](https://github.com/timacdonald) in https://github.com/laravel/nightwatch/pull/143
+* Request Sampling by [@timacdonald](https://github.com/timacdonald) in https://github.com/laravel/nightwatch/pull/142
+* Write payload for debugging by [@timacdonald](https://github.com/timacdonald) in https://github.com/laravel/nightwatch/pull/144
+* Add watch command by [@timacdonald](https://github.com/timacdonald) in https://github.com/laravel/nightwatch/pull/145
+* Improve status command by [@timacdonald](https://github.com/timacdonald) in https://github.com/laravel/nightwatch/pull/146
+
+**Full Changelog**: https://github.com/laravel/nightwatch/compare/v1.2.1...v1.3.0
 
 ## [v1.2.1](https://github.com/laravel/nightwatch/compare/v1.2.0...v1.2.1) - 2025-04-16
 
