@@ -3,6 +3,7 @@
 namespace Laravel\Nightwatch\Sensors;
 
 use Laravel\Nightwatch\Compatibility;
+use Laravel\Nightwatch\Contracts\LocalIngest;
 use Laravel\Nightwatch\ExecutionStage;
 use Laravel\Nightwatch\Records\Command;
 use Laravel\Nightwatch\State\CommandState;
@@ -19,6 +20,7 @@ final class CommandSensor
 {
     public function __construct(
         private CommandState $executionState,
+        private LocalIngest $ingest,
     ) {
         //
     }
@@ -39,7 +41,7 @@ final class CommandSensor
             default => (string) $input,
         };
 
-        $this->executionState->records->write(new Command(
+        $this->ingest->write(new Command(
             timestamp: $this->executionState->timestamp,
             deploy: $this->executionState->deploy,
             server: $this->executionState->server,

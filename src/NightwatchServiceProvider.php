@@ -95,7 +95,7 @@ final class NightwatchServiceProvider extends ServiceProvider
      *     token?: string,
      *     deployment?: string,
      *     server?: string,
-     *     ingest?: array{ uri?: string, timeout?: float|int, connection_timeout?: float|int },
+     *     ingest?: array{ uri?: string, timeout?: float|int, connection_timeout?: float|int, event_buffer?: int },
      *  }
      */
     private array $nightwatchConfig;
@@ -202,13 +202,16 @@ final class NightwatchServiceProvider extends ServiceProvider
         $state = $this->executionState();
 
         $this->app->instance(Core::class, $this->core = new Core(
-            ingest: new Ingest(
+            ingest: $ingest = new Ingest(
                 transmitTo: $this->nightwatchConfig['ingest']['uri'] ?? '127.0.0.1:2407',
                 connectionTimeout: $this->nightwatchConfig['ingest']['connection_timeout'] ?? 0.5,
                 timeout: $this->nightwatchConfig['ingest']['timeout'] ?? 0.5,
+                eventBuffer: $this->nightwatchConfig['ingest']['event_buffer'] ?? 500,
                 streamFactory: new SocketStreamFactory,
+                buffer: new RecordsBuffer,
             ),
             sensor: new SensorManager(
+                ingest: $ingest,
                 executionState: $state,
                 clock: $clock = new Clock,
                 location: new Location(
@@ -389,7 +392,7 @@ final class NightwatchServiceProvider extends ServiceProvider
          * @see \Laravel\Nightwatch\ExecutionStage::End
          * @see \Laravel\Nightwatch\Records\Request
          * @see \Laravel\Nightwatch\ExecutionStage::Terminating
-         * @see \Laravel\Nightwatch\Core::ingest()
+         * @see \Laravel\Nightwatch\Core::digest()
          */
         $this->callAfterResolving(HttpKernelContract::class, (new HttpKernelResolvedHandler($core))(...));
     }
@@ -419,18 +422,18 @@ final class NightwatchServiceProvider extends ServiceProvider
          * @see \Laravel\Nightwatch\ExecutionStage::Terminating
          * @see \Laravel\Nightwatch\ExecutionStage::End
          * @see \Laravel\Nightwatch\Records\Command
-         * @see \Laravel\Nightwatch\Core::ingest()
+         * @see \Laravel\Nightwatch\Core::digest()
          *
          * Jobs...
          * @see \Laravel\Nightwatch\State\CommandState::$source
-         * @see \Laravel\Nightwatch\State\CommandState::reset()
+         * @see \Laravel\Nightwatch\State\CommandState::flush()
          * @see \Laravel\Nightwatch\State\CommandState::$timestamp
          * @see \Laravel\Nightwatch\State\CommandState::$id
          * @see \Laravel\Nightwatch\Records\JobAttempt
          * @see \Laravel\Nightwatch\Records\Exception
          *
          * Scheduled tasks...
-         * @see \Laravel\Nightwatch\Core::ingest()
+         * @see \Laravel\Nightwatch\Core::digest()
          */
         $events->listen(CommandStarting::class, (new CommandStartingListener($events, $core, $kernel))(...));
     }

@@ -18,6 +18,7 @@ use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobQueued;
 use Illuminate\Queue\Events\JobQueueing;
 use Illuminate\Queue\Events\JobReleasedAfterException;
+use Laravel\Nightwatch\Contracts\LocalIngest;
 use Laravel\Nightwatch\Sensors\CacheEventSensor;
 use Laravel\Nightwatch\Sensors\CommandSensor;
 use Laravel\Nightwatch\Sensors\ExceptionSensor;
@@ -120,6 +121,7 @@ final class SensorManager
     public $commandSensor;
 
     public function __construct(
+        public LocalIngest $ingest,
         private RequestState|CommandState $executionState,
         private Clock $clock,
         public Location $location,
@@ -145,6 +147,7 @@ final class SensorManager
     public function request(Request $request, Response $response): void
     {
         $sensor = $this->requestSensor ??= new RequestSensor(
+            ingest: $this->ingest,
             requestState: $this->executionState, // @phpstan-ignore argument.type
         );
 
@@ -154,6 +157,7 @@ final class SensorManager
     public function command(InputInterface $input, int $status): void
     {
         $sensor = $this->commandSensor ??= new CommandSensor(
+            ingest: $this->ingest,
             executionState: $this->executionState, // @phpstan-ignore argument.type
         );
 
@@ -167,6 +171,7 @@ final class SensorManager
     {
         $sensor = $this->querySensor ??= new QuerySensor(
             clock: $this->clock,
+            ingest: $this->ingest,
             executionState: $this->executionState,
             location: $this->location,
         );
@@ -178,6 +183,7 @@ final class SensorManager
     {
         $sensor = $this->cacheEventSensor ??= new CacheEventSensor(
             clock: $this->clock,
+            ingest: $this->ingest,
             executionState: $this->executionState,
         );
 
@@ -187,6 +193,7 @@ final class SensorManager
     public function mail(MessageSending|MessageSent $event): void
     {
         $sensor = $this->mailSensor ??= new MailSensor(
+            ingest: $this->ingest,
             executionState: $this->executionState,
             clock: $this->clock,
         );
@@ -197,6 +204,7 @@ final class SensorManager
     public function notification(NotificationSending|NotificationSent $event): void
     {
         $sensor = $this->notificationSensor ??= new NotificationSensor(
+            ingest: $this->ingest,
             executionState: $this->executionState,
             clock: $this->clock,
         );
@@ -207,6 +215,7 @@ final class SensorManager
     public function outgoingRequest(float $startMicrotime, float $endMicrotime, RequestInterface $request, ResponseInterface $response): void
     {
         $sensor = $this->outgoingRequestSensor ??= new OutgoingRequestSensor(
+            ingest: $this->ingest,
             executionState: $this->executionState,
         );
 
@@ -217,6 +226,7 @@ final class SensorManager
     {
         $sensor = $this->exceptionSensor ??= new ExceptionSensor(
             clock: $this->clock,
+            ingest: $this->ingest,
             executionState: $this->executionState,
             location: $this->location,
         );
@@ -227,6 +237,7 @@ final class SensorManager
     public function log(LogRecord $record): void
     {
         $sensor = $this->logSensor ??= new LogSensor(
+            ingest: $this->ingest,
             executionState: $this->executionState,
         );
 
@@ -236,6 +247,7 @@ final class SensorManager
     public function queuedJob(JobQueueing|JobQueued $event): void
     {
         $sensor = $this->queuedJobSensor ??= new QueuedJobSensor(
+            ingest: $this->ingest,
             executionState: $this->executionState,
             clock: $this->clock,
             connectionConfig: $this->config->all()['queue']['connections'] ?? [],
@@ -247,6 +259,7 @@ final class SensorManager
     public function jobAttempt(JobProcessed|JobReleasedAfterException|JobFailed $event): void
     {
         $sensor = $this->jobAttemptSensor ??= new JobAttemptSensor(
+            ingest: $this->ingest,
             executionState: $this->executionState, // @phpstan-ignore argument.type
             clock: $this->clock,
             connectionConfig: $this->config->all()['queue']['connections'] ?? [],
@@ -258,6 +271,7 @@ final class SensorManager
     public function scheduledTask(ScheduledTaskFinished|ScheduledTaskSkipped|ScheduledTaskFailed $event): void
     {
         $sensor = $this->scheduledTaskSensor ??= new ScheduledTaskSensor(
+            ingest: $this->ingest,
             executionState: $this->executionState, // @phpstan-ignore argument.type
             clock: $this->clock,
         );
@@ -268,10 +282,29 @@ final class SensorManager
     public function user(): void
     {
         $sensor = $this->userSensor ??= new UserSensor(
+            ingest: $this->ingest,
             requestState: $this->executionState, // @phpstan-ignore argument.type
             clock: $this->clock,
         );
 
         $sensor();
+    }
+
+    public function flush(): void
+    {
+        $this->cacheEventSensor = null;
+        $this->exceptionSensor = null;
+        $this->logSensor = null;
+        $this->outgoingRequestSensor = null;
+        $this->querySensor = null;
+        $this->queuedJobSensor = null;
+        $this->jobAttemptSensor = null;
+        $this->notificationSensor = null;
+        $this->mailSensor = null;
+        $this->userSensor = null;
+        $this->stageSensor = null;
+        $this->scheduledTaskSensor = null;
+        $this->requestSensor = null;
+        $this->commandSensor = null;
     }
 }

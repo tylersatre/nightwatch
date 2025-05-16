@@ -6,7 +6,8 @@ use Closure;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Laravel\Nightwatch\Contracts\LocalIngest;
-use Laravel\Nightwatch\Payload;
+use Laravel\Nightwatch\Records\Record;
+use Laravel\Nightwatch\RecordsBuffer;
 
 use function collect;
 use function count;
@@ -16,21 +17,37 @@ use function json_decode;
 use function str_contains;
 use function value;
 
-final class FakeIngest implements LocalIngest
+class FakeIngest implements LocalIngest
 {
     /**
      * @var list<string>
      */
     public array $writes = [];
 
-    public function write(Payload $payload): void
+    public function __construct(
+        public RecordsBuffer $buffer = new RecordsBuffer,
+    ) {
+        //
+    }
+
+    public function write(Record $record): void
     {
-        $this->writes[] = $payload->rawPayload();
+        $this->buffer->write($record);
+    }
+
+    public function digest(): void
+    {
+        $this->writes[] = $this->buffer->pull()->rawPayload();
     }
 
     public function ping(): void
     {
         //
+    }
+
+    public function flush(): void
+    {
+        $this->buffer->flush();
     }
 
     public function assertWrittenTimes(int $expected): self

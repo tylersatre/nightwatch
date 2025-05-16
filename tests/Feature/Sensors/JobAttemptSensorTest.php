@@ -514,7 +514,7 @@ it('does not ingest or build up state while idle', function ($workCommand) {
 
     expect($loops)->toBeGreaterThan(50);
     $ingest->assertWrittenTimes(0);
-    expect(nightwatch()->state->records)->toHaveCount(2); // popping query + illuminate:queue:restart
+    expect(nightwatch()->ingest->buffer)->toHaveCount(2); // popping query + illuminate:queue:restart
 })->with($workCommands);
 
 it('captures all queue events for a job', function ($workCommand) use ($workOptions) {

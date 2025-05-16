@@ -28,7 +28,7 @@ final class WorkerEventListener
     {
         try {
             match ($event::class) {
-                Looping::class, WorkerStopping::class => $this->nightwatch->ingest()->waitForJob(),
+                Looping::class, WorkerStopping::class => $this->nightwatch->digest()->waitForJob(),
                 JobPopping::class => $this->nightwatch->resetStateForNextJob(),
                 JobProcessing::class => $this->nightwatch->prepareForJob($event->job),
             };

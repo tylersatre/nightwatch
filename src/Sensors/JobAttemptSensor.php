@@ -7,6 +7,7 @@ use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobReleasedAfterException;
 use Laravel\Nightwatch\Clock;
 use Laravel\Nightwatch\Concerns\NormalizesQueue;
+use Laravel\Nightwatch\Contracts\LocalIngest;
 use Laravel\Nightwatch\LazyValue;
 use Laravel\Nightwatch\Records\JobAttempt;
 use Laravel\Nightwatch\State\CommandState;
@@ -27,6 +28,7 @@ final class JobAttemptSensor
      */
     public function __construct(
         private CommandState $executionState,
+        private LocalIngest $ingest,
         private Clock $clock,
         private array $connectionConfig,
     ) {
@@ -42,7 +44,7 @@ final class JobAttemptSensor
         $now = $this->clock->microtime();
         $name = $event->job->resolveName();
 
-        $this->executionState->records->write(new JobAttempt(
+        $this->ingest->write(new JobAttempt(
             timestamp: $this->executionState->timestamp,
             deploy: $this->executionState->deploy,
             server: $this->executionState->server,

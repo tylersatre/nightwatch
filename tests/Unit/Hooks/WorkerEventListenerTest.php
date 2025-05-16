@@ -8,7 +8,7 @@ use Laravel\Nightwatch\RecordsBuffer;
 use Tests\FakeJob;
 
 it('gracefully handles exceptions for JobPopping event', function () {
-    nightwatch()->state->records = $buffer = new class extends RecordsBuffer
+    nightwatch()->ingest->buffer = $buffer = new class extends RecordsBuffer
     {
         public bool $thrownInFlush = false;
 

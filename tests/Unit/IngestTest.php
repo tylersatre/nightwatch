@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Support\Collection;
+use Laravel\Nightwatch\Facades\Nightwatch;
 use Laravel\Nightwatch\Payload;
+use Tests\FakeRecord;
 
 beforeEach(function () {
     StreamWrapper::reset();
@@ -21,7 +23,8 @@ it('configures the stream', function () {
         return fopen($args[0], 'r+');
     };
 
-    nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
 
     expect($calls)->toHaveCount(1);
     [$address, $connectionTimeout] = $calls[0];
@@ -39,9 +42,17 @@ it('configures the stream', function () {
 });
 
 it('throws an exception when unable to set read timeout', function () {
+    $exceptions = [];
+    Nightwatch::handleUnrecoverableExceptionsUsing(function ($e) use (&$exceptions) {
+        $exceptions[] = $e;
+    });
     StreamWrapper::intercept('stream_set_option', fn () => false);
 
-    nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
+
+    expect($exceptions)->toHaveCount(1);
+    throw $exceptions[0];
 })->throws(RuntimeException::class, <<<'MESSAGE'
 Failed configuring agent read timeout
 
@@ -53,7 +64,8 @@ Unread bytes: 0
 MESSAGE);
 
 it('sets the read timeout', function () {
-    nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
 
     expect(StreamWrapper::type('stream_set_option'))->toHaveCount(1);
     expect(StreamWrapper::type('stream_set_option')->value('args'))->toBe([
@@ -71,13 +83,14 @@ it('sets the read timeout', function () {
 });
 
 it('can write the payload in one write', function () {
-    StreamWrapper::intercept('stream_write', fn (string $value) => 28);
+    StreamWrapper::intercept('stream_write', fn (string $value) => 32);
 
-    nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
 
     expect(StreamWrapper::type('stream_write'))->toHaveCount(1);
     expect(StreamWrapper::type('stream_write')->value('args'))->toBe([
-        '25:'.Payload::SIGNATURE.':[{"t":"request"}]',
+        '29:'.Payload::SIGNATURE.':[{"t":"fake-record"}]',
     ]);
     expect(StreamWrapper::$events->pluck('type')->all())->toBe([
         'stream_open',
@@ -91,11 +104,19 @@ it('can write the payload in one write', function () {
 });
 
 it('throws an exception if initial write to stream fails', function () {
+    $exceptions = [];
+    Nightwatch::handleUnrecoverableExceptionsUsing(function ($e) use (&$exceptions) {
+        $exceptions[] = $e;
+    });
     StreamWrapper::intercept('stream_write', fn (string $value) => false);
 
-    nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
+
+    expect($exceptions)->toHaveCount(1);
+    throw $exceptions[0];
 })->throws(RuntimeException::class, <<<'MESSAGE'
-Unable to write to the agent. Written [0] Expected [28]
+Unable to write to the agent. Written [0] Expected [32]
 
 Timed out: false
 EOF: false
@@ -105,20 +126,21 @@ Unread bytes: 0
 MESSAGE);
 
 it('can write the payload in multiple write', function () {
-    $writes = [3, 7, 3, 5, 10];
+    $writes = [3, 7, 3, 5, 14];
     StreamWrapper::intercept('stream_write', function (string $value) use (&$writes) {
         return array_shift($writes);
     });
 
-    nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
 
     expect(StreamWrapper::type('stream_write'))->toHaveCount(5);
     expect(StreamWrapper::type('stream_write')->pluck('args')->all())->toBe([
-        ['25:'.Payload::SIGNATURE.':[{"t":"request"}]'],
-        [Payload::SIGNATURE.':[{"t":"request"}]'],
-        [':[{"t":"request"}]'],
-        ['"t":"request"}]'],
-        ['request"}]'],
+        ['29:'.Payload::SIGNATURE.':[{"t":"fake-record"}]'],
+        [Payload::SIGNATURE.':[{"t":"fake-record"}]'],
+        [':[{"t":"fake-record"}]'],
+        ['"t":"fake-record"}]'],
+        ['fake-record"}]'],
     ]);
     expect(StreamWrapper::$events->pluck('type')->all())->toBe([
         'stream_open',
@@ -136,6 +158,10 @@ it('can write the payload in multiple write', function () {
 });
 
 it('throws an exception if subsequent writes to stream fails', function () {
+    $exceptions = [];
+    Nightwatch::handleUnrecoverableExceptionsUsing(function ($e) use (&$exceptions) {
+        $exceptions[] = $e;
+    });
     $writes = 0;
     StreamWrapper::intercept('stream_write', function (string $value) use (&$writes) {
         if ($writes === 2) {
@@ -147,9 +173,13 @@ it('throws an exception if subsequent writes to stream fails', function () {
         return 3;
     });
 
-    nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
+
+    expect($exceptions)->toHaveCount(1);
+    throw $exceptions[0];
 })->throws(RuntimeException::class, <<<'MESSAGE'
-Unable to write to the agent. Written [6] Expected [28]
+Unable to write to the agent. Written [6] Expected [32]
 
 Timed out: false
 EOF: false
@@ -159,7 +189,8 @@ Unread bytes: 0
 MESSAGE);
 
 it('reads response from stream', function () {
-    nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
 
     expect(StreamWrapper::type('stream_read'))->toHaveCount(1);
     expect(StreamWrapper::type('stream_read')->value('args'))->toBe([
@@ -181,7 +212,9 @@ it('can read multiple times from stream', function () {
     StreamWrapper::intercept('stream_read', function () use (&$response) {
         return array_shift($response);
     });
-    nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
+
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
 
     expect(StreamWrapper::type('stream_read'))->toHaveCount(4);
     expect(StreamWrapper::type('stream_read')->pluck('args')->all())->toBe([
@@ -211,6 +244,10 @@ it('can read multiple times from stream', function () {
 });
 
 it('throws an exception if stream EOFs before getting the expected response', function () {
+    $exceptions = [];
+    Nightwatch::handleUnrecoverableExceptionsUsing(function ($e) use (&$exceptions) {
+        $exceptions[] = $e;
+    });
     $response = ['2', ':', false];
     StreamWrapper::intercept('stream_read', function () use (&$response) {
         if ($response === [':']) {
@@ -220,7 +257,11 @@ it('throws an exception if stream EOFs before getting the expected response', fu
         return array_shift($response);
     });
 
-    nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
+
+    expect($exceptions)->toHaveCount(1);
+    throw $exceptions[0];
 })->throws(RuntimeException::class, <<<'MESSAGE'
 Failed reading from the agent
 
@@ -232,9 +273,17 @@ Unread bytes: 0
 MESSAGE);
 
 it('throws when an unexpected response is received', function () {
+    $exceptions = [];
+    Nightwatch::handleUnrecoverableExceptionsUsing(function ($e) use (&$exceptions) {
+        $exceptions[] = $e;
+    });
     StreamWrapper::intercept('stream_read', fn () => 'XXXXXXXXXXXXXXXXXXXXXXX');
 
-    nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
+
+    expect($exceptions)->toHaveCount(1);
+    throw $exceptions[0];
 })->throws(RuntimeException::class, <<<'MESSAGE'
 Unexpected response from agent [XXXX]
 
@@ -246,12 +295,17 @@ Unread bytes: 19
 MESSAGE);
 
 it('closes the stream', function () {
-    nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
 
     expect(StreamWrapper::$events->pluck('type')->last())->toBe('stream_close');
 });
 
 it('does not retrieve meta of already closed stream', function () {
+    $exceptions = [];
+    Nightwatch::handleUnrecoverableExceptionsUsing(function ($e) use (&$exceptions) {
+        $exceptions[] = $e;
+    });
     $stream = null;
     nightwatch()->ingest->streamFactory = function ($address, $timeout) use (&$stream) {
         $stream = fopen($address, 'r+');
@@ -265,7 +319,11 @@ it('does not retrieve meta of already closed stream', function () {
         return false;
     });
 
-    nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
+
+    expect($exceptions)->toHaveCount(1);
+    throw $exceptions[0];
 })->throws(RuntimeException::class, <<<'MESSAGE'
 Failed reading from the agent
 
@@ -273,6 +331,10 @@ Stream already closed
 MESSAGE);
 
 it('stops attempting to read once the stream has reached eof', function () {
+    $exceptions = [];
+    Nightwatch::handleUnrecoverableExceptionsUsing(function ($e) use (&$exceptions) {
+        $exceptions[] = $e;
+    });
     $reads = 0;
     StreamWrapper::intercept('stream_read', function () use (&$reads) {
         $reads++;
@@ -284,14 +346,12 @@ it('stops attempting to read once the stream has reached eof', function () {
         return '';
     });
 
-    try {
-        nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
-    } catch (Throwable $e) {
-        //
-    }
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
 
-    expect($e)->toBeInstanceOf(RuntimeException::class);
-    expect($e->getMessage())->toBe(<<<'MESSAGE'
+    expect($exceptions)->toHaveCount(1);
+    expect($exceptions[0])->toBeInstanceOf(RuntimeException::class);
+    expect($exceptions[0]->getMessage())->toBe(<<<'MESSAGE'
     Unexpected response from agent []
 
     Timed out: false
@@ -319,6 +379,10 @@ it('stops attempting to read once the stream has reached eof', function () {
 });
 
 it('only attempts to read from the stream 5 times', function () {
+    $exceptions = [];
+    Nightwatch::handleUnrecoverableExceptionsUsing(function ($e) use (&$exceptions) {
+        $exceptions[] = $e;
+    });
     $reads = 0;
     StreamWrapper::intercept('stream_read', function () use (&$reads) {
         $reads++;
@@ -326,15 +390,13 @@ it('only attempts to read from the stream 5 times', function () {
         return '';
     });
 
-    try {
-        nightwatch()->ingest->write(Payload::json('[{"t":"request"}]'));
-    } catch (Throwable $e) {
-        //
-    }
+    nightwatch()->ingest->write(new FakeRecord);
+    nightwatch()->digest();
 
     expect($reads)->toBe(5);
-    expect($e)->toBeInstanceOf(RuntimeException::class);
-    expect($e->getMessage())->toBe(<<<'MESSAGE'
+    expect($exceptions)->toHaveCount(1);
+    expect($exceptions[0])->toBeInstanceOf(RuntimeException::class);
+    expect($exceptions[0]->getMessage())->toBe(<<<'MESSAGE'
     Unexpected response from agent []
 
     Timed out: false
@@ -366,6 +428,52 @@ it('only attempts to read from the stream 5 times', function () {
         'stream_flush',
         'stream_close',
     ]);
+});
+
+it('does not trigger ingest before reaching threshold', function () {
+    $writes = [];
+    StreamWrapper::intercept('stream_write', function (string $value) use (&$writes) {
+        $writes[] = $value;
+
+        return strlen($value);
+    });
+
+    for ($i = 0; $i < 499; $i++) {
+        nightwatch()->ingest->write(new FakeRecord);
+    }
+
+    expect($writes)->toHaveCount(0);
+});
+
+it('triggers ingest after exceeding threshold', function () {
+    $writes = [];
+    StreamWrapper::intercept('stream_write', function (string $value) use (&$writes) {
+        $writes[] = $value;
+
+        return strlen($value);
+    });
+
+    for ($i = 0; $i < 499; $i++) {
+        nightwatch()->ingest->write(new FakeRecord);
+    }
+
+    expect($writes)->toHaveCount(0);
+
+    nightwatch()->ingest->write(new FakeRecord);
+
+    expect($writes)->toHaveCount(2);
+    expect(implode('', $writes))->toBe('10009:'.Payload::SIGNATURE.':['.implode(',', array_fill(0, 500, json_encode(new FakeRecord))).']');
+
+    for ($i = 0; $i < 499; $i++) {
+        nightwatch()->ingest->write(new FakeRecord);
+    }
+
+    expect($writes)->toHaveCount(2);
+
+    nightwatch()->ingest->write(new FakeRecord);
+
+    expect($writes)->toHaveCount(4);
+    expect(implode('', $writes))->toBe(str_repeat('10009:'.Payload::SIGNATURE.':['.implode(',', array_fill(0, 500, json_encode(new FakeRecord))).']', 2));
 });
 
 class StreamWrapper

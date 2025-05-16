@@ -5,6 +5,7 @@ namespace Laravel\Nightwatch\Sensors;
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Events\MessageSent;
 use Laravel\Nightwatch\Clock;
+use Laravel\Nightwatch\Contracts\LocalIngest;
 use Laravel\Nightwatch\Records\Mail;
 use Laravel\Nightwatch\State\CommandState;
 use Laravel\Nightwatch\State\RequestState;
@@ -22,6 +23,7 @@ final class MailSensor
     private ?float $startTime = null;
 
     public function __construct(
+        private LocalIngest $ingest,
         private RequestState|CommandState $executionState,
         private Clock $clock,
     ) {
@@ -50,7 +52,7 @@ final class MailSensor
 
         $this->executionState->mail++;
 
-        $this->executionState->records->write(new Mail(
+        $this->ingest->write(new Mail(
             timestamp: $now,
             deploy: $this->executionState->deploy,
             server: $this->executionState->server,
