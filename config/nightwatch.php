@@ -11,6 +11,14 @@ return [
         'commands' => env('NIGHTWATCH_COMMAND_SAMPLE_RATE', 1.0),
     ],
 
+    'filtering' => [
+        'ignore_cache_events' => env('NIGHTWATCH_IGNORE_CACHE_EVENTS', false),
+        'ignore_mail' => env('NIGHTWATCH_IGNORE_MAIL', false),
+        'ignore_notifications' => env('NIGHTWATCH_IGNORE_NOTIFICATIONS', false),
+        'ignore_outgoing_requests' => env('NIGHTWATCH_IGNORE_OUTGOING_REQUESTS', false),
+        'ignore_queries' => env('NIGHTWATCH_IGNORE_QUERIES', false),
+    ],
+
     'ingest' => [
         'uri' => env('NIGHTWATCH_INGEST_URI', '127.0.0.1:2407'),
         'timeout' => env('NIGHTWATCH_INGEST_TIMEOUT', 0.5),

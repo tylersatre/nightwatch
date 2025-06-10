@@ -92,6 +92,13 @@ final class NightwatchServiceProvider extends ServiceProvider
      *        requests: float,
      *        commands: float,
      *     },
+     *     filtering?: array{
+     *         ignore_cache_events?: bool,
+     *         ignore_mail?: bool,
+     *         ignore_notifications?: bool,
+     *         ignore_outgoing_requests?: bool,
+     *         ignore_queries?: bool,
+     *     },
      *     token?: string,
      *     deployment?: string,
      *     server?: string,
@@ -227,6 +234,13 @@ final class NightwatchServiceProvider extends ServiceProvider
                 'sampling' => [
                     'requests' => $this->configuredSampleRate('requests'),
                     'commands' => $this->configuredSampleRate('commands'),
+                ],
+                'filtering' => [
+                    'ignore_cache_events' => (bool) ($this->nightwatchConfig['filtering']['ignore_cache_events'] ?? false),
+                    'ignore_mail' => (bool) ($this->nightwatchConfig['filtering']['ignore_mail'] ?? false),
+                    'ignore_notifications' => (bool) ($this->nightwatchConfig['filtering']['ignore_notifications'] ?? false),
+                    'ignore_outgoing_requests' => (bool) ($this->nightwatchConfig['filtering']['ignore_outgoing_requests'] ?? false),
+                    'ignore_queries' => (bool) ($this->nightwatchConfig['filtering']['ignore_queries'] ?? false),
                 ],
             ],
         ));
