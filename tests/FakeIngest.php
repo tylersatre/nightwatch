@@ -35,6 +35,11 @@ class FakeIngest implements IngestContract
         $this->ingest->write($record);
     }
 
+    public function shouldDigest(bool $bool): void
+    {
+        $this->ingest->shouldDigest($bool);
+    }
+
     public function digest(): void
     {
         $this->ingest->digest();
@@ -110,11 +115,6 @@ class FakeIngest implements IngestContract
         return $this->streams->last()?->value;
     }
 
-    public function __get(string $name): mixed
-    {
-        return $this->ingest->{$name};
-    }
-
     public function writes(): Collection
     {
         return $this->streams->map(function ($stream) {
@@ -127,5 +127,15 @@ class FakeIngest implements IngestContract
         return $this->writes()->map(function ($write) {
             return json_decode($write, true, flags: JSON_THROW_ON_ERROR);
         });
+    }
+
+    public function __get(string $name): mixed
+    {
+        return $this->ingest->{$name};
+    }
+
+    public function __set(string $name, mixed $value): void
+    {
+        $this->ingest->{$name} = $value;
     }
 }

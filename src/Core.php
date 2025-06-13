@@ -32,6 +32,7 @@ final class Core
      *     sampling: array{
      *         requests: float,
      *         commands: float,
+     *         exceptions: float,
      *     },
      *     filtering: array{
      *         ignore_cache_events: bool,
@@ -75,7 +76,11 @@ final class Core
      */
     public function digest(): self
     {
-        if (! $this->shouldSample || $this->waitingForJob) {
+        if ($this->waitingForJob) {
+            return $this;
+        }
+
+        if (! $this->shouldSample && ! $this->shouldSampleOnException) {
             return $this;
         }
 

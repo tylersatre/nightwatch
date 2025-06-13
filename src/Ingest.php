@@ -31,6 +31,8 @@ final class Ingest implements IngestContract
      */
     private array $timeout;
 
+    private bool $shouldDigest = true;
+
     /**
      * @param  (callable(string $address, float $timeout): resource)  $streamFactory
      */
@@ -38,7 +40,6 @@ final class Ingest implements IngestContract
         string $transmitTo,
         private float $connectionTimeout,
         float $timeout,
-        private int $eventBuffer,
         public $streamFactory,
         public RecordsBuffer $buffer,
     ) {
@@ -54,7 +55,7 @@ final class Ingest implements IngestContract
     {
         $this->buffer->write($record);
 
-        if ($this->buffer->count() >= $this->eventBuffer) {
+        if ($this->shouldDigest && $this->buffer->full) {
             $this->digest();
         }
     }
@@ -69,9 +70,18 @@ final class Ingest implements IngestContract
         $this->transmit(Payload::text('PING'));
     }
 
+    public function shouldDigest(bool $bool): void
+    {
+        $this->shouldDigest = $bool;
+    }
+
     public function digest(): void
     {
-        $this->transmit($this->buffer->pull());
+        if ($this->shouldDigest) {
+            $this->transmit($this->buffer->pull());
+        } else {
+            $this->buffer->flush();
+        }
     }
 
     private function transmit(Payload $payload): void

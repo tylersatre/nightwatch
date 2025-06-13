@@ -88,9 +88,10 @@ final class NightwatchServiceProvider extends ServiceProvider
     /**
      * @var array{
      *     enabled?: bool,
-     *     sampling: array{
-     *        requests: float,
-     *        commands: float,
+     *     sampling?: array{
+     *        requests?: float,
+     *        commands?: float,
+     *        exceptions?: float,
      *     },
      *     filtering?: array{
      *         ignore_cache_events?: bool,
@@ -213,9 +214,10 @@ final class NightwatchServiceProvider extends ServiceProvider
                 transmitTo: $this->nightwatchConfig['ingest']['uri'] ?? '127.0.0.1:2407',
                 connectionTimeout: $this->nightwatchConfig['ingest']['connection_timeout'] ?? 0.5,
                 timeout: $this->nightwatchConfig['ingest']['timeout'] ?? 0.5,
-                eventBuffer: $this->nightwatchConfig['ingest']['event_buffer'] ?? 500,
                 streamFactory: new SocketStreamFactory,
-                buffer: new RecordsBuffer,
+                buffer: new RecordsBuffer(
+                    length: $this->nightwatchConfig['ingest']['event_buffer'] ?? 500,
+                ),
             ),
             sensor: new SensorManager(
                 ingest: $ingest,
@@ -234,6 +236,7 @@ final class NightwatchServiceProvider extends ServiceProvider
                 'sampling' => [
                     'requests' => $this->configuredSampleRate('requests'),
                     'commands' => $this->configuredSampleRate('commands'),
+                    'exceptions' => $this->configuredSampleRate('exceptions'),
                 ],
                 'filtering' => [
                     'ignore_cache_events' => (bool) ($this->nightwatchConfig['filtering']['ignore_cache_events'] ?? false),
@@ -247,7 +250,7 @@ final class NightwatchServiceProvider extends ServiceProvider
     }
 
     /**
-     * @param  'requests'|'commands'  $key
+     * @param  'requests'|'commands'|'exceptions'  $key
      */
     private function configuredSampleRate($key): float
     {
