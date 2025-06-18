@@ -62,6 +62,8 @@ use Laravel\Nightwatch\Hooks\ResponsePreparedListener;
 use Laravel\Nightwatch\Hooks\RouteMatchedListener;
 use Laravel\Nightwatch\Hooks\RouteMiddleware;
 use Laravel\Nightwatch\Hooks\TerminatingListener;
+use Laravel\Nightwatch\Middleware\DisableNightwatch;
+use Laravel\Nightwatch\Middleware\DisableNightwatchLogs;
 use Laravel\Nightwatch\State\CommandState;
 use Laravel\Nightwatch\State\RequestState;
 use Throwable;
@@ -142,6 +144,8 @@ final class NightwatchServiceProvider extends ServiceProvider
                 $this->registerPublications();
                 $this->registerCommands();
             }
+
+            $this->registerRouteAliases();
         } catch (Throwable $e) {
             Nightwatch::unrecoverableExceptionOccurred($e);
         }
@@ -194,6 +198,9 @@ final class NightwatchServiceProvider extends ServiceProvider
         $this->app->singleton(RouteMiddleware::class, fn () => new RouteMiddleware($this->core)); // @phpstan-ignore argument.type
 
         $this->app->scoped(GlobalMiddleware::class, fn () => new GlobalMiddleware($this->core)); // @phpstan-ignore argument.type
+
+        $this->app->singleton(Middleware\DisableNightwatch::class, fn () => new Middleware\DisableNightwatch($this->core));
+        $this->app->singleton(Middleware\DisableNightwatchLogs::class, fn () => new Middleware\DisableNightwatchLogs($this->core));
     }
 
     private function registerAgentCommand(): void
@@ -284,6 +291,14 @@ final class NightwatchServiceProvider extends ServiceProvider
             Console\AgentCommand::class,
             Console\StatusCommand::class,
         ]);
+    }
+
+    private function registerRouteAliases(): void
+    {
+        $router = $this->app->make(\Illuminate\Routing\Router::class);
+
+        $router->aliasMiddleware('nightwatch.disable', DisableNightwatch::class);
+        $router->aliasMiddleware('nightwatch.disable-logs', DisableNightwatchLogs::class);
     }
 
     private function registerHooks(): void
