@@ -8,7 +8,7 @@ use Laravel\Nightwatch\Core;
 use Laravel\Nightwatch\State\CommandState;
 use Laravel\Nightwatch\State\RequestState;
 
-final class DisableNightwatchLogs
+final class OnlyExceptions
 {
     /**
      * @param  Core<RequestState|CommandState>  $nightwatch

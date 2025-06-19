@@ -63,7 +63,7 @@ use Laravel\Nightwatch\Hooks\RouteMatchedListener;
 use Laravel\Nightwatch\Hooks\RouteMiddleware;
 use Laravel\Nightwatch\Hooks\TerminatingListener;
 use Laravel\Nightwatch\Middleware\DisableNightwatch;
-use Laravel\Nightwatch\Middleware\DisableNightwatchLogs;
+use Laravel\Nightwatch\Middleware\OnlyExceptions;
 use Laravel\Nightwatch\State\CommandState;
 use Laravel\Nightwatch\State\RequestState;
 use Throwable;
@@ -200,7 +200,7 @@ final class NightwatchServiceProvider extends ServiceProvider
         $this->app->scoped(GlobalMiddleware::class, fn () => new GlobalMiddleware($this->core)); // @phpstan-ignore argument.type
 
         $this->app->singleton(Middleware\DisableNightwatch::class, fn () => new Middleware\DisableNightwatch($this->core));
-        $this->app->singleton(Middleware\DisableNightwatchLogs::class, fn () => new Middleware\DisableNightwatchLogs($this->core));
+        $this->app->singleton(Middleware\OnlyExceptions::class, fn () => new Middleware\OnlyExceptions($this->core));
     }
 
     private function registerAgentCommand(): void
@@ -298,7 +298,7 @@ final class NightwatchServiceProvider extends ServiceProvider
         $router = $this->app->make(\Illuminate\Routing\Router::class);
 
         $router->aliasMiddleware('nightwatch.disable', DisableNightwatch::class);
-        $router->aliasMiddleware('nightwatch.disable-logs', DisableNightwatchLogs::class);
+        $router->aliasMiddleware('nightwatch.only-exceptions', OnlyExceptions::class);
     }
 
     private function registerHooks(): void
