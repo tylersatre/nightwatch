@@ -13,15 +13,11 @@ final class DisableNightwatchLogs
     /**
      * @param  Core<RequestState|CommandState>  $nightwatch
      */
-    public function __construct(private Core $nightwatch)
-    {
-        //
-    }
+    public function __construct(private readonly Core $nightwatch) {}
 
     public function handle(Request $request, Closure $next): mixed
     {
         $this->nightwatch->shouldSample = false;
-        $this->nightwatch->flush();
 
         return $next($request);
     }
